@@ -16,32 +16,28 @@ class TestObjectPerms(TestCase):
         self.assertTrue(Person.objects.filter(name='fred').count() == 1)
 
     def test_direct_permission(self):
-        # p = Person.objects.get(name='fred').party_ptr
         o = Z.objects.get(name='bif').permissionableobject_ptr
-        # PartyPrivilege.objects.create(party=p,object=o,privilege='admin')
-
-        # Fred has admin privileges on are single Z object.
-        qset = Z.get_permissioned_objects([o.id])
+        qset = Z._get_descendant_objects([o.id])
         self.assertTrue(qset.count() == 1)
         self.assertTrue(qset[0].name == 'bif')
 
     def test_inherited_permission(self):
-        # p = Person.objects.get(name='fred').party_ptr
         o = W.objects.get(name='foo').permissionableobject_ptr
-
-        # PartyPrivilege.objects.create(party=p,object=o,privilege='admin')
-
-        # Fred has admin privileges on are single W object, and this
         # should inherit down to x, y, z
-        qset = Z.get_permissioned_objects([o.id])
+        qset = Z._get_descendant_objects([o.id])
+        self.assertTrue(qset.count() == 1)
+        self.assertTrue(qset[0].name == 'bif')
+
+
+    def test_permission_assignment(self):
+        p = Person.objects.get(name='fred').party_ptr
+        o = W.objects.get(name='foo').permissionableobject_ptr 
+        # o = Z.objects.get(name='bif').permissionableobject_ptr
+        PartyPrivilege.objects.create(party=p,object=o,privilege='admin')
+        # Fred has admin privileges on a single W object.
+        qset = Z.get_permitted_items(p,'admin')
         self.assertTrue(qset.count() == 1)
         self.assertTrue(qset[0].name == 'bif')
 
 
 
-# class SimpleTest(TestCase):
-#     def test_basic_addition(self):
-#         """
-#         Tests that 1 + 1 always equals 2.
-#         """
-#         self.assertEqual(1 + 1, 2)

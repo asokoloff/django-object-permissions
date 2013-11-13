@@ -26,7 +26,16 @@ class PermissionableObject(models.Model):
     permission_parent_classes = list()
 
     @classmethod
-    def get_permissioned_objects(cls, directly_permed_objects):
+    def get_permitted_items(cls, party, privilege):
+        dpos = PermissionableObject.objects.filter(
+            partyprivilege__party=party,
+            partyprivilege__privilege=privilege
+            ).values_list('id',flat=True)
+
+        return cls._get_descendant_objects(dpos)
+
+    @classmethod
+    def _get_descendant_objects(cls, directly_permed_objects):
         """ 
         Expects a list of permissionableobject ids over which the user has
         direct privileges. Builds a query that searches for matches in
