@@ -10,12 +10,24 @@ PRIVILEGES = (
 )
 
 class Party(models.Model):
-    
-    parent_party = models.ForeignKey(
+    pass
+#     parent_party = models.ForeignKey(
+#         'Party',
+#         blank=True,
+#         null=True,
+#         related_name='child_parties'
+#         )
+
+class Membership(models.Model):
+
+    member = models.ForeignKey(
         'Party',
-        blank=True,
-        null=True,
-        related_name='child_parties'
+        related_name='members'
+        )
+
+    member_of = models.ForeignKey(
+        'Party',
+        related_name='memberships'
         )
 
     inherit_permissions = models.BooleanField(default=False)
@@ -27,6 +39,9 @@ class PermissionableObject(models.Model):
 
     @classmethod
     def get_permitted_items(cls, party, privilege):
+
+        # TODO: add the ability to figure out memberships
+
         dpos = PermissionableObject.objects.filter(
             partyprivilege__party=party,
             partyprivilege__privilege=privilege
@@ -72,7 +87,7 @@ class PermissionableObject(models.Model):
 class PartyPrivilege(models.Model):
     
     party = models.ForeignKey(Party)
-    object = models.ForeignKey(PermissionableObject)
+    permissionable_object = models.ForeignKey(PermissionableObject)
     privilege = models.CharField(
         max_length=100,
         choices=PRIVILEGES
