@@ -1,3 +1,6 @@
+# See: http://stackoverflow.com/questions/502916/django-how-to-create-a-model-dynamically-just-for-testing
+# for instructions on how to make models for testing only
+
 from django.test import TestCase
 
 from models import Person, W, X, Y, Z, PartyPrivilege
@@ -33,7 +36,7 @@ class TestObjectPerms(TestCase):
         p = Person.objects.get(name='fred').party_ptr
         o = W.objects.get(name='foo').permissionableobject_ptr 
         # o = Z.objects.get(name='bif').permissionableobject_ptr
-        PartyPrivilege.objects.create(party=p,object=o,privilege='admin')
+        PartyPrivilege.objects.create(party=p,permissionable_object=o,privilege='admin')
         # Fred has admin privileges on a single W object.
         qset = Z.get_permitted_items(p,'admin')
         self.assertTrue(qset.count() == 1)

@@ -94,7 +94,7 @@ class PartyPrivilege(models.Model):
         )
 
     class Meta:
-        unique_together = ('party', 'object')
+        unique_together = ('party', 'permissionable_object')
 
 
 # subclasses for testing purpose only
