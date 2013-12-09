@@ -3,7 +3,34 @@
 
 from django.test import TestCase
 
-from models import Person, W, X, Y, Z, PartyPrivilege
+from models import Party, PermissionableObject, PartyPrivilege
+from django.db import models
+
+# Subclasses for testing purposes only. These are only loaded by the
+# test runner
+
+class Person(Party):
+    name = models.CharField(max_length=100)
+
+class W(PermissionableObject):
+    name = models.CharField(max_length=100)
+
+class X(PermissionableObject):
+    permission_parent_classes = [W]
+    name = models.CharField(max_length=100)
+    w = models.ForeignKey(W)
+
+class Y(PermissionableObject):
+    permission_parent_classes = [X]
+    name = models.CharField(max_length=100)
+    x = models.ForeignKey(X)
+
+class Z(PermissionableObject):
+    permission_parent_classes = [Y]
+    name = models.CharField(max_length=100)
+    y = models.ForeignKey(Y)
+
+
 
 class TestObjectPerms(TestCase):
 

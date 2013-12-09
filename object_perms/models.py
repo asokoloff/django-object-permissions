@@ -11,12 +11,7 @@ PRIVILEGES = (
 
 class Party(models.Model):
     pass
-#     parent_party = models.ForeignKey(
-#         'Party',
-#         blank=True,
-#         null=True,
-#         related_name='child_parties'
-#         )
+
 
 class Membership(models.Model):
 
@@ -97,25 +92,3 @@ class PartyPrivilege(models.Model):
         unique_together = ('party', 'permissionable_object')
 
 
-# subclasses for testing purpose only
-
-class Person(Party):
-    name = models.CharField(max_length=100)
-
-class W(PermissionableObject):
-    name = models.CharField(max_length=100)
-
-class X(PermissionableObject):
-    permission_parent_classes = [W]
-    name = models.CharField(max_length=100)
-    w = models.ForeignKey(W)
-
-class Y(PermissionableObject):
-    permission_parent_classes = [X]
-    name = models.CharField(max_length=100)
-    x = models.ForeignKey(X)
-
-class Z(PermissionableObject):
-    permission_parent_classes = [Y]
-    name = models.CharField(max_length=100)
-    y = models.ForeignKey(Y)
