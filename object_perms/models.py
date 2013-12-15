@@ -115,22 +115,19 @@ class PermissionableObject(models.Model):
         for child in permission_children:
             child._update_permission_ancestor_data()
 
-#     def save(self, *args, **kwargs):
-#         print "about to save instance of", self.__class__
-#         super(self.__class__, self).save(*args, **kwargs)
-
+    def save(self, *args, **kwargs):
+        super(PermissionableObject, self).save(*args, **kwargs)
+        self._update_permission_ancestor_data()
 
 class PermissionAncestor(models.Model):
     """
-    For a given permissionable object, this table records all of the
-    other permissionable objects from which the first object inherits
-    permissions, including the object itself. (Each permissionable
-    object is treated as its own object_ancestor in this table.) The
-    purpose of storing the data in this form is to allow simple
-    queries that traverse object hierarchies of any depth. The data in
-    this table is derived using the foreign key relationships of
-    tables that subclass PermissionableObject. The table is kept
-    current by the save method for PermissionableObject.
+    The data in this model is derived using the foreign key
+    relationships of tables that subclass PermissionableObject. For a
+    given permissionable object, this model records all of the other
+    permissionable objects from which the first object inherits
+    permissions, including the object itself. The purpose of storing
+    the data in this form is to allow simple queries that traverse
+    object hierarchies of any depth.
     """
 
     child_object = models.ForeignKey(PermissionableObject,
@@ -153,5 +150,4 @@ class PartyPrivilege(models.Model):
 
     class Meta:
         unique_together = ('party', 'permissionable_object', 'privilege')
-
 
