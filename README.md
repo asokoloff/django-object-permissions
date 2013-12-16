@@ -1,7 +1,7 @@
 # Django object permissions
 
 This application is inspired by the object permission system used in
-the (now-legacy) OpenACS web platform. See e.g.:
+the OpenACS web platform. See e.g.:
 
 http://openacs.org/doc/permissions.html
 
@@ -19,7 +19,7 @@ than - the one in OpenACS, it preserves key ideas and features:
 "permissionable" objects. Parties can be individuals or groups.
 
 * To incorporate parties and permissionable objects into an application
-data model, the developer subtypes models provided in this
+data model, the developer subclasses models provided in this
 application: Party and PermissionableObject.
 
 * All permission information can be derived from the data in a single,
@@ -44,22 +44,12 @@ important ways.
   hierarchies from the foreign keys of models that sub-class
   PermissionableObject. This means that single instance of
   PermissionableObject can belong to multiple hierarchies. (Note that
-  inheritance only takes place for foreign keys that are flagged to
-  create inherited permissions.)
+  inheritance only takes place for foreign keys that are flagged for
+  permission inheritance.)
 
-* OpenACS denormalizes the hierarchies using auxiliary tables and
-  database triggers. Django object permissions (for now) uses a simple
-  system that generates not-so-simple queries. The scalability of this
-  approach is questionable (see caveats, below).
-
-* OpenACS provides for a hierarchy of permission types (e.g. "admin"
-  is the parent permission of "read", "write", and "delete"). Django
-  object permissions are (for now) flat.
-
-
-## Caveats
-
-Performance...
+* OpenACS supports permission type hierarchies (e.g. "admin" is the
+  parent permission of "read", "write", and "delete"). Django object
+  permissions are (for now) flat.
 
 
 ## Usage

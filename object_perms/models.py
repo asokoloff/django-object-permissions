@@ -10,7 +10,6 @@ PRIVILEGES = (
 
 class Party(models.Model):
 
-    # does this make sense in the context of a subclass?
     def get_memberships(self, require_permissions_inherit=True):
         """
         recursively identify group memberships
@@ -26,6 +25,7 @@ class Party(models.Model):
             partyprivilege__party__in=self.get_memberships(),
             partyprivilege__privilege=privilege
             )
+
 
 class Membership(models.Model):
 
@@ -119,6 +119,7 @@ class PermissionableObject(models.Model):
         super(PermissionableObject, self).save(*args, **kwargs)
         self._update_permission_ancestor_data()
 
+
 class PermissionAncestor(models.Model):
     """
     The data in this model is derived using the foreign key
@@ -130,14 +131,19 @@ class PermissionAncestor(models.Model):
     object hierarchies of any depth.
     """
 
-    child_object = models.ForeignKey(PermissionableObject,
-                                              related_name='permission_ancestors')
+    child_object = models.ForeignKey(
+        PermissionableObject,
+        related_name='permission_ancestors'
+        )
 
-    ancestor_object = models.ForeignKey(PermissionableObject,
-                                        related_name='permission_children')
+    ancestor_object = models.ForeignKey(
+        PermissionableObject,
+        related_name='permission_children'
+        )
 
     class Meta:
         unique_together = ('child_object', 'ancestor_object')
+
 
 class PartyPrivilege(models.Model):
     

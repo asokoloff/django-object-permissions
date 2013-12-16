@@ -1,10 +1,12 @@
-# See: http://stackoverflow.com/questions/502916/django-how-to-create-a-model-dynamically-just-for-testing
-# for instructions on how to make models for testing only
-
 from django.test import TestCase
 
 from models import Party, PermissionableObject, PartyPrivilege
 from django.db import models
+
+# See:
+# http://stackoverflow.com/questions/502916/django-how-to-create-a-model-dynamically-just-for-testing
+# for instructions on how to make models for testing only
+
 
 # Subclasses for testing purposes only. These are only loaded by the
 # test runner
@@ -29,7 +31,6 @@ class Z(PermissionableObject):
     permission_parent_classes = [Y]
     name = models.CharField(max_length=100)
     y = models.ForeignKey(Y)
-
 
 
 class TestObjectPerms(TestCase):
@@ -57,7 +58,6 @@ class TestObjectPerms(TestCase):
         qset = Z._get_descendant_objects([o.id])
         self.assertTrue(qset.count() == 1)
         self.assertTrue(qset[0].name == 'bif')
-
 
     def test_permission_assignment(self):
         p = Person.objects.get(name='fred').party_ptr
