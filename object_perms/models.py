@@ -1,4 +1,4 @@
-from django.db import models, transaction
+from django.db import models
 from model_utils.managers import InheritanceManager
 
 PRIVILEGES = (
@@ -7,6 +7,7 @@ PRIVILEGES = (
     ('edit', 'Edit'),
     ('delete', 'Delete'),
 )
+
 
 class Party(models.Model):
 
@@ -19,12 +20,6 @@ class Party(models.Model):
             if item.inherit_permissions or not require_permissions_inherit:
                 result.extend(item.member_of.get_memberships())
         return result
-
-    def get_direct_permissions(self, privilege):
-        PermissionableObject.objects.filter(
-            partyprivilege__party__in=self.get_memberships(),
-            partyprivilege__privilege=privilege
-            )
 
 
 class Membership(models.Model):
@@ -52,9 +47,8 @@ class PermissionableObject(models.Model):
 
     @classmethod
     def get_permitted_items(cls, party, privilege):
-
-        direct_permissions = party.get_direct_permissions(privilege)
-
+        from utils import get_direct_permissions
+        direct_permissions = get_direct_permissions(party, privilege)
         return cls.objects.filter(
             permissionableobject_ptr__permission_ancestors__ancestor_object__in=direct_permissions
             ).distinct()
@@ -73,8 +67,7 @@ class PermissionableObject(models.Model):
         all_paths.append(this_segment)
         return all_paths                            
 
-
-    def _derive_permission_ancestors(self):
+    def get_permission_ancestors(self):
         """
         Calculates objects that the present object inherits
         permissions from using fk relations in subclasses. Returns
@@ -87,37 +80,11 @@ class PermissionableObject(models.Model):
         ancestor_str.append('self.permissionableobject_ptr')
         return [eval(x) for x in ancestor_str]
 
-    def _update_permission_ancestor_data(self):
-
-        derived_ancestors = self._derive_permission_ancestors()
-        stored_ancestors = PermissionAncestor.objects.filter(child_object=self)
-
-        # check if anything has changed
-        if set([x.id for x in derived_ancestors]) == set([x.ancestor_object_id for x in stored_ancestors]):
-            return
-
-        # FIXME: add transaction handling
-        PermissionAncestor.objects.filter(child_object=self).delete()
-        for ancestor in derived_ancestors:
-            PermissionAncestor.objects.create(child_object=self,ancestor_object=ancestor)
-
-        self._update_childrens_ancestor_data()
-
-    def _update_childrens_ancestor_data(self):
-        """
-        Uses PermissionAncestor to find child
-        objects. InheritanceManager (select_subclasses queryset
-        method) returns subclass instances that we need.
-        """
-        permission_children = PermissionableObject.objects.filter(
-            permission_ancestors__ancestor_object=self
-            ).select_subclasses()
-        for child in permission_children:
-            child._update_permission_ancestor_data()
-
     def save(self, *args, **kwargs):
+        from utils import update_permission_ancestor_data, update_child_ancestor_data
         super(PermissionableObject, self).save(*args, **kwargs)
-        self._update_permission_ancestor_data()
+        update_permission_ancestor_data(self)
+        update_child_ancestor_data(self)
 
 
 class PermissionAncestor(models.Model):
