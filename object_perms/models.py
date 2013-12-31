@@ -81,11 +81,9 @@ class PermissionableObject(models.Model):
         return [eval(x) for x in ancestor_str]
 
     def save(self, *args, **kwargs):
-        from utils import update_permission_ancestor_data, update_child_ancestor_data
+        from utils import update_permission_ancestor_data
         super(PermissionableObject, self).save(*args, **kwargs)
         update_permission_ancestor_data(self)
-        update_child_ancestor_data(self)
-
 
 class PermissionAncestor(models.Model):
     """
