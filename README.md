@@ -58,7 +58,7 @@ To expose a model to the permissioning system, subclass
 PermissionableObject.
 
 ```
-from object_permissions.models import PermissionableObject
+from object_perms.models import PermissionableObject
 
 class MyModel(PermissionableObject):
       pass
@@ -68,19 +68,17 @@ To create models describing individuals or groups that are assigned
 permissions, subclass Party.
 
 ```
-from object_permissions.models import Party
+from object_perms.models import Party
 
 class MyUser(Party):
       pass
 ```
 
-TBD: Group membership.
-
 
 To assign a given permission over a "permissionable" object:
 
 ```
-from object_permissions.utils import assign_permission
+from object_perms.utils import assign_permission
 
 some_object = MyModel.objects.get(id=somevar)
 some_party = MyUser.objects.get(id=somevar)
@@ -91,7 +89,7 @@ assign_permission(some_object, some_party, 'admin')
 To test for a given permission over an object:
 
 ```
-from object_permissions.utils import has_permission
+from object_perms.utils import has_permission
 
 some_object = MyModel.objects.get(id=somevar)
 some_party = MyUser.objects.get(id=somevar)
