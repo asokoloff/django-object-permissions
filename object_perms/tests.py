@@ -46,6 +46,7 @@ class TestObjectPerms(TestCase):
     def test_person_exists(self):
         self.assertTrue(Person.objects.filter(name='fred').count() == 1)
 
+    # I don't understand what this does anymore
     def test_direct_permission(self):
         o = Z.objects.get(name='bif').permissionableobject_ptr
         qset = Z._get_descendant_objects([o.id])
