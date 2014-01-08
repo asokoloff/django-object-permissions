@@ -12,16 +12,14 @@ def get_direct_permissions(party, privilege):
         partyprivilege__privilege=privilege
         )
 
-def update_permission_ancestor_data(po_subclass_instance, check_needed=True):
+def update_permission_ancestor_data(po_subclass_instance, check_ancestor_changes=True):
     """
     Expects an instance of a subclass of PermissionableObject. Called
     recursively for objects that inherit permissions from passed object.
     """
-    print "**** Updating ancestors for instance of", po_subclass_instance.__class__
-
     derived_ancestors = po_subclass_instance.get_permission_ancestors()
 
-    if check_needed:
+    if check_ancestor_changes:
         # check if anything has changed
         stored_ancestors = PermissionAncestor.objects.filter(child_object=po_subclass_instance)
         if set([x.id for x in derived_ancestors]) == set([x.ancestor_object_id for x in stored_ancestors]):
@@ -34,9 +32,6 @@ def update_permission_ancestor_data(po_subclass_instance, check_needed=True):
     permission_children = PermissionableObject.objects.filter(
         permission_ancestors__ancestor_object=po_subclass_instance
         ).exclude(id=po_subclass_instance.id).select_subclasses()
-
-    # FIXME: recursion not properly worked out?
-    print ','.join([x.id for x in permission_children])
 
     for child in permission_children:
         update_permission_ancestor_data(child, False)

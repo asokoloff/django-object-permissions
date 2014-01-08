@@ -1,12 +1,8 @@
 from django.test import TestCase
-
-from models import Party, PermissionableObject, PartyPrivilege
+from models import Party, PermissionableObject, PartyPrivilege, \
+    PermissionAncestor
 from django.db import models
 from utils import update_permission_ancestor_data
-
-# See:
-# http://stackoverflow.com/questions/502916/django-how-to-create-a-model-dynamically-just-for-testing
-# for instructions on how to make models for testing only
 
 # Subclasses for testing purposes only. These are only loaded by the
 # test runner
@@ -36,16 +32,32 @@ class Z(PermissionableObject):
 class TestObjectPerms(TestCase):
 
     def setUp(self):
-#         w = W.objects.create(name='foo')
-#         x = X.objects.create(name='bar',w=w)
-#         y = Y.objects.create(name='baz',x=x)
-#         Z.objects.create(name='bif',y=y)
-
         Person.objects.create(name='fred')
 
     def test_person_exists(self):
         self.assertTrue(Person.objects.filter(name='fred').count() == 1)
 
+    def create_test_instances(self, **kwargs):
+        w = W()
+        w.name = 'w'
+        w.save(**kwargs)
+
+        x = X()
+        x.name = 'x'
+        x.w = w
+        x.save(**kwargs)
+
+        y = Y()
+        y.name = 'y'
+        y.x = x
+        y.save(**kwargs)
+
+        z = Z()
+        z.name = 'z'
+        z.y = y
+        z.save(**kwargs)
+
+        return w, x, y, z
 
     def test_ancestor_paths(self):
 
@@ -55,42 +67,65 @@ class TestObjectPerms(TestCase):
         expected_set = set(['z', 'z.y', 'z.y.x', 'z.y.x.w'])
         self.assertTrue(set(Z_ancestors) == expected_set)
 
-    def test_ancestor_object_retrieval(self):
+    def test_update_ancestors(self):
 
-        w = W()
-        w.name = 'w'
-        w.save()
-        update_permission_ancestor_data(w)
+        kwargs = {'update_ancestors': False}
 
-        x = X()
-        x.name = 'x'
-        x.w = w
+        w, x, y, z = self.create_test_instances(**kwargs)
+
+        self.assertTrue(len(w.get_permission_ancestors()) == 1)
+        self.assertTrue(w.get_permission_ancestors()[0].__class__ == PermissionableObject)
+        self.assertTrue(len(z.get_permission_ancestors()) == 4)
+
+        # at this point, none of the objects should have ancestor data
+        # populated.
+        stored_ancestor_count = PermissionAncestor.objects.filter(child_object=z).count()
+        self.assertTrue(stored_ancestor_count == 0)
+
+        # trigger populate of PermissionAncestor
+        for instance in z, y, x, w:
+        update_permission_ancestor_data(instance)
+
+        w2 = W.objects.create(name='w2')
+        x.w = w2
+        x.save(**kwargs)
+
+        # at this point, x, y, and z should have stale data in
+        # PermissionAncestor.
+        for instance in x, y, z:
+            stored_ancestors = PermissionAncestor.objects.filter(
+                child_object=instance
+                )
+            derived_ancestors = instance.get_permission_ancestors()
+            self.assertFalse(
+                set([a.id for a in derived_ancestors]) == set([b.ancestor_object_id for b in stored_ancestors])
+                )
+
+        # this should trigger refresh of data for x, y, z
         x.save()
-        update_permission_ancestor_data(x)
+        for item in x, y, z:
+            stored_ancestors = PermissionAncestor.objects.filter(
+                child_object=item
+                )
+            derived_ancestors = item.get_permission_ancestors()
+            self.assertTrue(
+                set([a.id for a in derived_ancestors]) == set([b.ancestor_object_id for b in stored_ancestors])
+                )
 
-        y = Y()
-        y.name = 'y'
-        y.x = x
-        y.save()
-        update_permission_ancestor_data(y)
-
-        z = Z()
-        z.name = 'z'
-        z.y = y
-        z.save()
-        update_permission_ancestor_data(z)
-
-        update_permission_ancestor_data(w)
-
-        top_object = W.objects.get(name='w')
-        self.assertTrue(len(top_object.get_permission_ancestors()) == 1)
-        self.assertTrue(top_object.get_permission_ancestors()[0].__class__ == PermissionableObject)
-        bottom_object = Z.objects.get(name='z')
-
-        self.assertTrue(len(bottom_object.get_permission_ancestors()) == 4)
-
-
-
+    def test_integration_for_update_ancestors(self):
+        # create a new set of instances with save method to update
+        # ancestors activated
+        w, x, y, z = self.create_test_instances()
+        for index, item in enumerate([w, x, y, z]):
+            stored_ancestors = PermissionAncestor.objects.filter(
+                child_object=item
+                )
+            derived_ancestors = item.get_permission_ancestors()
+            self.assertTrue(len(derived_ancestors) == index)
+            self.assertTrue(
+                set([a.id for a in derived_ancestors]) == set([b.ancestor_object_id for b in stored_ancestors])
+                )
+        
 #     def test_direct_permission(self):
 #         o = Z.objects.get(name='bif').permissionableobject_ptr
 #         qset = Z._get_descendant_objects([o.id])
