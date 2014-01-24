@@ -29,6 +29,8 @@ def update_permission_ancestor_data(po_subclass_instance, check_ancestor_changes
     for ancestor in derived_ancestors:
         PermissionAncestor.objects.create(child_object=po_subclass_instance,ancestor_object=ancestor)
 
+    # select_subclasses is a query method provided by
+    # InheritanceManager to allow traversal to the child model
     permission_children = PermissionableObject.objects.filter(
         permission_ancestors__ancestor_object=po_subclass_instance
         ).exclude(id=po_subclass_instance.id).select_subclasses()

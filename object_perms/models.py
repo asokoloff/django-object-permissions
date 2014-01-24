@@ -39,7 +39,6 @@ class Membership(models.Model):
 
 class PermissionableObject(models.Model):
 
-    permission_parent_classes = list()
     objects = InheritanceManager()
 
     def __unicode__(self):
@@ -47,44 +46,45 @@ class PermissionableObject(models.Model):
 
     @classmethod
     def get_permitted_items(cls, party, privilege):
+        if cls is PermissionableObject:
+            raise TypeError('get_permitted_items cannot be called on base model PermissionableObject')
         from utils import get_direct_permissions
         direct_permissions = get_direct_permissions(party, privilege)
         return cls.objects.filter(
             permissionableobject_ptr__permission_ancestors__ancestor_object__in=direct_permissions
             ).distinct()
 
-    @classmethod
-    def _get_ancestor_paths(cls):
-        """
-        Recursively adds paths to parent objects when calculating
-        permission ancestors.
-        """
-        all_paths = list()
-        this_segment = cls.__name__.lower()
-        for x in cls.permission_parent_classes:
-            for path in x._get_ancestor_paths():
-                all_paths.append('{0}.{1}'.format(this_segment, path))
-        all_paths.append(this_segment)
-        return all_paths                            
+    @property
+    def permission_parents(self):
+        return []
 
     def get_permission_ancestors(self):
         """
-        Calculates objects that the present object inherits
-        permissions from using fk relations in subclasses. Returns
-        list of instances of PermissionAncestor (not subclass).
+        For our purposes, permission ancestors includes the object
+        this method is originally called on. Recursively gathers
+        parent objects using foreign key relations specifid in property
+        permission parents.
         """
-        ancestor_str = list()
-        for x in self.__class__.permission_parent_classes:
-            for path in x._get_ancestor_paths():
-                ancestor_str.append('self.{0}.permissionableobject_ptr'.format(path))
-        ancestor_str.append('self.permissionableobject_ptr')
-        return [eval(x) for x in ancestor_str]
+        # Don't call this with instances of base Model
+        if self.__class__ is PermissionableObject:
+            raise TypeError(
+                'get_permission_ancestors cannot be called on instances of the base model PermissionableObject'
+                )
 
+        return [x.permissionableobject_ptr for x in self._get_permission_ancestors()]
+
+    def _get_permission_ancestors(self):
+        ancestors = [self]
+        for parent in self.permission_parents:
+            ancestors.extend(parent._get_permission_ancestors())
+        return ancestors
+            
     def save(self, *args, **kwargs):
-        from utils import update_permission_ancestor_data
         update_ancestors = kwargs.pop('update_ancestors', True)
         super(PermissionableObject, self).save(*args, **kwargs)
-        if update_ancestors:
+        # only run for instances of subclasses
+        if update_ancestors and self.__class__ is not PermissionableObject:
+            from utils import update_permission_ancestor_data
             update_permission_ancestor_data(self)
 
 class PermissionAncestor(models.Model):

@@ -10,23 +10,36 @@ from utils import update_permission_ancestor_data
 class Person(Party):
     name = models.CharField(max_length=100)
 
+
 class W(PermissionableObject):
     name = models.CharField(max_length=100)
 
+
 class X(PermissionableObject):
-    permission_parent_classes = [W]
     name = models.CharField(max_length=100)
     w = models.ForeignKey(W)
+    
+    @property
+    def permission_parents(self):
+        return [self.w]
+
 
 class Y(PermissionableObject):
-    permission_parent_classes = [X]
     name = models.CharField(max_length=100)
     x = models.ForeignKey(X)
 
+    @property
+    def permission_parents(self):
+        return [self.x]
+
+
 class Z(PermissionableObject):
-    permission_parent_classes = [Y]
     name = models.CharField(max_length=100)
     y = models.ForeignKey(Y)
+
+    @property
+    def permission_parents(self):
+        return [self.y]
 
 
 class TestObjectPerms(TestCase):
@@ -59,16 +72,7 @@ class TestObjectPerms(TestCase):
 
         return w, x, y, z
 
-    def test_ancestor_paths(self):
-
-        self.assertTrue(W._get_ancestor_paths() == ['w'])
-        Z_ancestors = Z._get_ancestor_paths()
-        self.assertTrue(len(Z_ancestors) == 4)
-        expected_set = set(['z', 'z.y', 'z.y.x', 'z.y.x.w'])
-        self.assertTrue(set(Z_ancestors) == expected_set)
-
-    def test_update_ancestors(self):
-
+    def test_get_permission_ancestors(self):
         kwargs = {'update_ancestors': False}
 
         w, x, y, z = self.create_test_instances(**kwargs)
@@ -77,14 +81,21 @@ class TestObjectPerms(TestCase):
         self.assertTrue(w.get_permission_ancestors()[0].__class__ == PermissionableObject)
         self.assertTrue(len(z.get_permission_ancestors()) == 4)
 
+    def test_update_ancestors(self):
+
+        kwargs = {'update_ancestors': False}
+
+        w, x, y, z = self.create_test_instances(**kwargs)
+
         # at this point, none of the objects should have ancestor data
         # populated.
-        stored_ancestor_count = PermissionAncestor.objects.filter(child_object=z).count()
-        self.assertTrue(stored_ancestor_count == 0)
+        for item in [w, x, y, z]:
+            stored_ancestor_count = PermissionAncestor.objects.filter(child_object=item).count()
+            self.assertTrue(stored_ancestor_count == 0)
 
         # trigger populate of PermissionAncestor
         for instance in z, y, x, w:
-        update_permission_ancestor_data(instance)
+            update_permission_ancestor_data(instance)
 
         w2 = W.objects.create(name='w2')
         x.w = w2
@@ -121,7 +132,7 @@ class TestObjectPerms(TestCase):
                 child_object=item
                 )
             derived_ancestors = item.get_permission_ancestors()
-            self.assertTrue(len(derived_ancestors) == index)
+            self.assertTrue(len(derived_ancestors) == index + 1)
             self.assertTrue(
                 set([a.id for a in derived_ancestors]) == set([b.ancestor_object_id for b in stored_ancestors])
                 )

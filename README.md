@@ -29,9 +29,10 @@ stores a party, a permissionable object, and a permission type.
 * Permissions can be assigned and queried by simple, uniform functions
 and methods (see below).
 
-* Rather than trying to store and manage information about all
-possible relationships between parties and permissionable objects, the
-system makes use of hierarchical relationships within the
+* The power of this sytems is its ability to figure out inherited
+permissions. Rather than trying to store and manage information about
+all possible relationships between parties and permissionable objects,
+the system makes use of hierarchical relationships within the
 data. Parties can be organized into groups, or groups of
 groups. Likewise, permissionable objects can inherit permissions from
 parent objects.
@@ -112,23 +113,35 @@ The method returns a query set that can be further filtered.
 
 To create inherited permissions between two related models, subclass
 PermissionableObject for both models, and designate the foreign keys
-for permission inheritance using the attribue
-permission_parent_classes:
+for permission inheritance by overriding the property
+permission_parents found in the base class as follows:
 
 ```
 class W(PermissionableObject):
     name = models.CharField(max_length=100)
 
 class X(PermissionableObject):
-    permission_parent_classes = [W]
     name = models.CharField(max_length=100)
     w = models.ForeignKey(W)
+
+    @property
+    def permission_parents(self):
+       return [self.w]
+
+class Y(PermissionableObject):
+    name = models.CharField(max_length=100)
+    x = models.ForeignKey(W)
+
+    @property
+    def permission_parents(self):
+       return [self.x]
+
 ````
 
 In the example above, if we grant a party the permission "admin" over
 an instance of W, that party will also have admin permissions on
-related instances of X. Note that this system can traverse n foreign
-key relationships.
+related instances of X and indirecly related instance Y. Note that
+this system can traverse n foreign key relationships.
 
 
 
