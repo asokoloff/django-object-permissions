@@ -10,7 +10,7 @@ http://openacs.org/doc/permissions-tediously-explained.html
 It is experimental at this point - NOT production-ready code.
 
 
-## Core concepts: object-based permissions with context hierarchies
+## Core concepts: object-based permissions with inheritance
 
 Although the implementation here is different from - and simpler
 than - the one in OpenACS, it preserves key ideas and features:
@@ -29,13 +29,17 @@ stores a party, a permissionable object, and a permission type.
 * Permissions can be assigned and queried by simple, uniform functions
 and methods (see below).
 
-* The power of this sytems is its ability to figure out inherited
-permissions. Rather than trying to store and manage information about
-all possible relationships between parties and permissionable objects,
-the system makes use of hierarchical relationships within the
-data. Parties can be organized into groups, or groups of
-groups. Likewise, permissionable objects can inherit permissions from
-parent objects.
+* The power of this sytem is found in its ability to derive granular
+permissions (i.e. for a given party over an object or objects) using
+inherited attributes. A party can inherit priveleges from the groups
+that it belongs to, and groups can belong to (and inherit from) other
+groups. Likewise, objects can be subject to a permission that was
+assigned to its parent objects. The system uses foreign key
+relationships to determine inheritance between objects, and the
+attributes are inherited recursively to any depth. Using inheritance,
+the system can derive an "access control matrix" between all objects and
+parties from relatively few direct permission assignment.
+
 
 The design here differs from the system found in OpenACS in some
 important ways.
@@ -110,7 +114,6 @@ MyModel.get_permitted_items(some_party, 'some_privilege')
 
 The method returns a query set that can be further filtered.
 
-
 To create inherited permissions between two related models, subclass
 PermissionableObject for both models, and designate the foreign keys
 for permission inheritance by overriding the property
@@ -143,5 +146,23 @@ an instance of W, that party will also have admin permissions on
 related instances of X and indirecly related instance Y. Note that
 this system can traverse n foreign key relationships.
 
+To allow a party to be a member of another party, use the mapping
+table Membership. To grant the member party all permissions that are
+assigned to the group party, set the inherit_permissions attribute of
+Membership to True.
 
+````
 
+class Person(Party):
+...
+
+class WorkGroup(Party):
+...
+
+a_person = Person.objects.create()
+
+a_workgroup = WorkGroup.objects.create()
+
+a_member = Membership.objects.create(member=a_person.party, member_of=a_workgroup.party, inherit_permissions=True)
+
+````
